@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '0.1.1');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.1.0');
 
 class SensorsAnalyticsException extends Exception {
 }

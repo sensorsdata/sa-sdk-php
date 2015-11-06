@@ -168,7 +168,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
     }
 
     public function testBatchConsumer() {
-        $consumer = new BatchConsumer("http://git.sensorsdata.cn/test");
+        $consumer = new BatchConsumer("http://sensorsdata.cn/test");
         $sa = new SensorsAnalytics($consumer);
         $sa->track('1234', 'Test', array('From' => 'Baidu'));
         $sa->track_signup('1234', 'abcd', 'Signup', array('Channel' => 'Hongbao'));
