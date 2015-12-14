@@ -150,7 +150,7 @@ class SensorsAnalytics {
     }
 
     /**
-     * 跟踪一个用户的注册行为。
+     * 这个接口是一个较为复杂的功能，请在使用前先阅读相关说明:http://www.sensorsdata.cn/manual/track_signup.html，并在必要时联系我们的技术支持人员。
      *
      * @param string $distinct_id 用户注册之后的唯一标识。
      * @param string $original_id 用户注册前的唯一标识。
