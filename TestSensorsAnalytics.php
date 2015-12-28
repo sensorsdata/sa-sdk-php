@@ -121,6 +121,24 @@ class NormalTest extends PHPUnit_Framework_TestCase {
 
     /**
      * @expectedException    SensorsAnalyticsIllegalDataException
+     * @expectedExceptionMessageRegExp #.*property key must be a valid variable name.*#
+     */
+    public function testException6() {
+        $sa = new SensorsAnalytics(null);
+        $sa->track(1234, 'Test', array('distincT_id' => 'SensorsData'));
+    }
+
+    /**
+     * @expectedException    SensorsAnalyticsIllegalDataException
+     * @expectedExceptionMessageRegExp #.*property key must be a valid variable name.*#
+     */
+    public function testException7() {
+        $sa = new SensorsAnalytics(null);
+        $sa->track(1234, 'TestEvent', array('a123456789a123456789a123456789a123456789a123456789a123456789a123456789a123456789a123456789a1234567890' => 'SensorsData'));
+    }
+
+    /**
+     * @expectedException    SensorsAnalyticsIllegalDataException
      * @expectedExceptionMessageRegExp #.*property's value must be a str.*#
      */
     public function testException8() {
@@ -137,6 +155,15 @@ class NormalTest extends PHPUnit_Framework_TestCase {
         $a = array("b" => 123);
         $c = array(123);
         $sa->track(1234, 'TestEvent', array('TestProperty' => array("a" => 123)));
+    }
+
+    /**
+     * @expectedException    SensorsAnalyticsIllegalDataException
+     * @expectedExceptionMessageRegExp #the max length of \[distinct_id\] is 255#
+     */
+    public function testException10() {
+        $sa = new SensorsAnalytics(null);
+        $sa->track('abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz', 'TestEvent', array('test_key' => 'SensorsData'));
     }
 
     public function testBatchConsumerMock() {

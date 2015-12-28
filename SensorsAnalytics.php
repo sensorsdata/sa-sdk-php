@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.1.0');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.2.0');
 
 class SensorsAnalyticsException extends Exception {
 }
@@ -55,6 +55,9 @@ class SensorsAnalytics {
         if (!isset($data['distinct_id']) or strlen($data['distinct_id']) == 0) {
             throw new SensorsAnalyticsIllegalDataException("property [distinct_id] must not be empty");
         }
+        if (strlen($data['distinct_id']) > 255) {
+            throw new SensorsAnalyticsIllegalDataException("the max length of [distinct_id] is 255");
+        }
         $data['distinct_id'] = strval($data['distinct_id']);
 
         // 检查 time
@@ -69,7 +72,7 @@ class SensorsAnalytics {
         }
         $data['time'] = $ts;
 
-        $name_pattern = "/^[a-zA-Z_$][a-zA-Z\\d_$]*$/";
+        $name_pattern = "/^((?!^distinct_id$|^original_id$|^time$|^properties$|^id$|^first_id$|^second_id$|^users$|^events$|^event$|^user_id$|^date$|^datetime$)[a-zA-Z_$][a-zA-Z\\d_$]{0,99})$/i";
         // 检查 Event Name
         if (isset($data['event']) && !preg_match($name_pattern, $data['event'])) {
             throw new SensorsAnalyticsIllegalDataException("event name must be a valid variable name. [name='${data['event']}']");
@@ -171,6 +174,13 @@ class SensorsAnalytics {
             'original_id' => $original_id,
             'properties' => $all_properties,
         );
+        // 检查 original_id
+        if (!isset($data['original_id']) or strlen($data['original_id']) == 0) {
+            throw new SensorsAnalyticsIllegalDataException("property [original_id] must not be empty");
+        }
+        if (strlen($data['original_id']) > 255) {
+            throw new SensorsAnalyticsIllegalDataException("the max length of [original_id] is 255");
+        }
         $data = $this->_normalize_data($data);
         $this->_consumer->send($this->_json_dumps($data));
     }
@@ -184,6 +194,17 @@ class SensorsAnalytics {
      */
     public function profile_set($distinct_id, $profiles = array()) {
         return $this->_profile_update('profile_set', $distinct_id, $profiles);
+    }
+
+    /**
+     * 直接设置一个用户的 Profile，如果某个 Profile 已存在则不设置。
+     *
+     * @param string $distinct_id
+     * @param array $profiles
+     * @return boolean
+     */
+    public function profile_set_once($distinct_id, $profiles = array()) {
+        return $this->_profile_update('profile_set_once', $distinct_id, $profiles);
     }
 
     /**
