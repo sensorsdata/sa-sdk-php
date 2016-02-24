@@ -1,16 +1,20 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.2.0');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.3.0');
 
 class SensorsAnalyticsException extends Exception {
 }
 
-//  在发送的数据格式有误时，SDK会抛出此异常，用户应当捕获并处理。
+// 在发送的数据格式有误时，SDK会抛出此异常，用户应当捕获并处理。
 class SensorsAnalyticsIllegalDataException extends SensorsAnalyticsException {
 }
 
 // 在因为网络或者不可预知的问题导致数据无法发送时，SDK会抛出此异常，用户应当捕获并处理。
 class SensorsAnalyticsNetworkException extends SensorsAnalyticsException {
+}
+
+// 当且仅当DEBUG模式中，任何网络错误、数据异常等都会抛出此异常，用户可不捕获，用于测试SDK接入正确性
+class SensorsAnalyticsDebugException extends Exception {
 }
 
 class SensorsAnalytics {
@@ -345,6 +349,116 @@ class FileConsumer extends AbstractConsumer {
     }
 }
 
+class DebugConsumer extends AbstractConsumer {
+
+    private $_debug_url_prefix;
+    private $_request_timeout;
+    private $_debug_write_data;
+
+    /**
+     * DebugConsumer constructor,用于调试模式.
+     * 具体说明可以参照:http://www.sensorsdata.cn/manual/debug_mode.html
+     * 
+     * @param string $debug_url_prefix 服务器的专门用于Debug模式的URL地址
+     * @param bool $debug_write_data 是否把发送的数据真正写入
+     * @param int $request_timeout 请求服务器的超时时间,单位毫秒.
+     * @throws SensorsAnalyticsDebugException
+     */
+    public function __construct($debug_url_prefix, $debug_write_data = True, $request_timeout = 1000) {
+        $this->_debug_url_prefix = $debug_url_prefix;
+        $this->_request_timeout = $request_timeout;
+        $this->_debug_write_data = $debug_write_data;
+
+        // 检查ServerUrl是否以debug结尾
+        if (($temp = strlen($this->_debug_url_prefix) - strlen("debug")) <= 0 ||
+                strpos($this->_debug_url_prefix, "debug", $temp) === FALSE) {
+            throw new SensorsAnalyticsDebugException("Please init with debug API url.");
+        }
+    }
+
+    public function send($msg) {
+        $buffers = array();
+        $buffers[] = $msg;
+        $response = $this->_do_request(array(
+            "data_list" => $this->_encode_msg_list($buffers),
+            "gzip" => 1
+        ));
+        printf("\n=========================================================================\n");
+        if ($response['ret_code'] === 200) {
+            printf("valid message: %s\n", $msg);
+        } else {
+            printf("invalid message: %s\n", $msg);
+            printf("ret_code: %d\n", $response['ret_code']);
+            printf("ret_content: %s\n", $response['ret_content']);
+            throw new SensorsAnalyticsDebugException("Unexpected response from SensorsAnalytics.");
+        }
+    }
+
+    /**
+     * 发送数据包给远程服务器。
+     *
+     * @param array $data
+     * @return array
+     * @throws SensorsAnalyticsDebugException
+     */
+    protected function _do_request($data) {
+        $params = array();
+        foreach ($data as $key => $value) {
+            $params[] = $key . '=' . urlencode($value);
+        }
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_URL, $this->_debug_url_prefix);
+        if($this->_debug_write_data === false) {
+            // 这个参数为 false, 说明只需要校验,不需要真正写入
+            print("\ntry Dry-Run\n");
+            curl_setopt($ch, CURLOPT_HTTPHEADER, Array (
+                "Dry-Run:true"
+            ) );
+
+
+        }
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, $this->_request_timeout);
+        curl_setopt($ch, CURLOPT_TIMEOUT_MS, $this->_request_timeout);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, implode('&', $params));
+        curl_setopt($ch, CURLOPT_USERAGENT, "PHP SDK");
+        
+        $http_response_header = curl_exec($ch);
+        if (!$http_response_header) {
+            throw new SensorsAnalyticsDebugException(
+                    "Failed to connect to SensorsAnalytics. [error='" + curl_error($ch) + "']"); 
+        }
+        
+        $result = array(
+            "ret_content" => $http_response_header,
+            "ret_code" => curl_getinfo($ch, CURLINFO_HTTP_CODE)
+        );
+        curl_close($ch);
+        return $result;
+    }
+
+    /**
+     * 对待发送的数据进行编码
+     *
+     * @param string $msg_list
+     * @return string
+     */
+    private function _encode_msg_list($msg_list) {
+        return base64_encode($this->_gzip_string("[" . implode(",", $msg_list) . "]"));
+    }
+
+    /**
+     * GZIP 压缩一个字符串
+     *
+     * @param string $data
+     * @return string
+     */
+    private function _gzip_string($data) {
+        return gzencode($data);
+    }
+}
 
 class BatchConsumer extends AbstractConsumer {
 

@@ -43,6 +43,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($i, 9);
     }
 
+
     function my_gzdecode($string) {
         $string = substr($string, 10);
         return gzinflate($string);
@@ -157,6 +158,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
         $sa->track(1234, 'TestEvent', array('TestProperty' => array("a" => 123)));
     }
 
+
     /**
      * @expectedException    SensorsAnalyticsIllegalDataException
      * @expectedExceptionMessageRegExp #the max length of \[distinct_id\] is 255#
@@ -195,7 +197,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
     }
 
     public function testBatchConsumer() {
-        $consumer = new BatchConsumer("http://sensorsdata.cn/test");
+        $consumer = new BatchConsumer("http://git.sensorsdata.cn/test");
         $sa = new SensorsAnalytics($consumer);
         $sa->track('1234', 'Test', array('From' => 'Baidu'));
         $sa->track_signup('1234', 'abcd', 'Signup', array('Channel' => 'Hongbao'));
@@ -210,5 +212,15 @@ class NormalTest extends PHPUnit_Framework_TestCase {
         }
         $sa->profile_set('1234', array('City' => '北京'));
         $sa->close();
+    }
+
+    public function testDebugConsumer() {
+        $consumer = new DebugConsumer('http://10.10.229.134:8001/debug', false);
+        $sa = new SensorsAnalytics($consumer);
+        $sa->track('1234', 'Test', array('PhpTestProperty' => 'Baidu'));
+        $consumer = new DebugConsumer('http://10.10.229.134:8001/debug', true);
+        $sa = new SensorsAnalytics($consumer);
+        $sa->track('1234', 'Test', array('PhpTestProperty' => 123));
+        $sa->track('1234', 'Test', array('PhpTestProperty' => 'Baidu'));
     }
 }
