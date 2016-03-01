@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.3.0');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.3.1');
 
 class SensorsAnalyticsException extends Exception {
 }
@@ -369,9 +369,10 @@ class DebugConsumer extends AbstractConsumer {
         $this->_request_timeout = $request_timeout;
         $this->_debug_write_data = $debug_write_data;
 
+        $url = parse_url($debug_url_prefix);
         // 检查ServerUrl是否以debug结尾
-        if (($temp = strlen($this->_debug_url_prefix) - strlen("debug")) <= 0 ||
-                strpos($this->_debug_url_prefix, "debug", $temp) === FALSE) {
+        if (($temp = strlen($url["path"]) - strlen("debug")) <= 0 ||
+                strpos($url["path"], "debug", $temp) === FALSE) {
             throw new SensorsAnalyticsDebugException("Please init with debug API url.");
         }
     }

@@ -1,7 +1,9 @@
-# sa-sdk-php
+# Sensors Analytics
 
 This is the official PHP SDK for Sensors Analytics.
 
-Current version: 1.3.0
+## To learn more
 
-To Learn More: http://www.sensorsdata.cn/manual/php_sdk.html
+See our [full manual](http://www.sensorsdata.cn/manual/php_sdk.html)
+
+
