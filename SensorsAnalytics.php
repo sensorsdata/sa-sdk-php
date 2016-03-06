@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.3.1');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.3.2');
 
 class SensorsAnalyticsException extends Exception {
 }
@@ -359,22 +359,32 @@ class DebugConsumer extends AbstractConsumer {
      * DebugConsumer constructor,用于调试模式.
      * 具体说明可以参照:http://www.sensorsdata.cn/manual/debug_mode.html
      * 
-     * @param string $debug_url_prefix 服务器的专门用于Debug模式的URL地址
-     * @param bool $debug_write_data 是否把发送的数据真正写入
+     * @param string $url_prefix 服务器的URL地址
+     * @param bool $write_data 是否把发送的数据真正写入
      * @param int $request_timeout 请求服务器的超时时间,单位毫秒.
      * @throws SensorsAnalyticsDebugException
      */
-    public function __construct($debug_url_prefix, $debug_write_data = True, $request_timeout = 1000) {
-        $this->_debug_url_prefix = $debug_url_prefix;
-        $this->_request_timeout = $request_timeout;
-        $this->_debug_write_data = $debug_write_data;
-
-        $url = parse_url($debug_url_prefix);
-        // 检查ServerUrl是否以debug结尾
-        if (($temp = strlen($url["path"]) - strlen("debug")) <= 0 ||
-                strpos($url["path"], "debug", $temp) === FALSE) {
-            throw new SensorsAnalyticsDebugException("Please init with debug API url.");
+    public function __construct($url_prefix, $write_data = True, $request_timeout = 1000) {
+        $parsed_url = parse_url($url_prefix);
+        if ($parsed_url === false) {
+            throw new SensorsAnalyticsDebugException("Invalid server url of Sensors Analytics.");
         }
+
+        // 将 URI Path 替换成 Debug 模式的 '/debug'
+        $parsed_url['path'] = '/debug';
+
+        $this->_debug_url_prefix = ((isset($parsed_url['scheme'])) ? $parsed_url['scheme'] . '://' : '')
+            .((isset($parsed_url['user'])) ? $parsed_url['user'] . ((isset($parsed_url['pass'])) ? ':' . $parsed_url['pass'] : '') .'@' : '')
+            .((isset($parsed_url['host'])) ? $parsed_url['host'] : '')
+            .((isset($parsed_url['port'])) ? ':' . $parsed_url['port'] : '')
+            .((isset($parsed_url['path'])) ? $parsed_url['path'] : '')
+            .((isset($parsed_url['query'])) ? '?' . $parsed_url['query'] : '')
+            .((isset($parsed_url['fragment'])) ? '#' . $parsed_url['fragment'] : '')
+            ;
+
+        $this->_request_timeout = $request_timeout;
+        $this->_debug_write_data = $write_data;
+
     }
 
     public function send($msg) {
