@@ -161,10 +161,9 @@ class SensorsAnalytics {
      *
      * @param string $distinct_id 用户注册之后的唯一标识。
      * @param string $original_id 用户注册前的唯一标识。
-     * @param string $event_name 事件名称。
      * @param array $properties 事件的属性。
      */
-    public function track_signup($distinct_id, $original_id, $event_name, $properties = array()) {
+    public function track_signup($distinct_id, $original_id, $properties = array()) {
         $event_time = $this->_extract_user_time($properties);
         $all_properties = $this->_get_common_properties();
         if ($properties) {
@@ -172,7 +171,7 @@ class SensorsAnalytics {
         }
         $data = array(
             'type' => 'track_signup',
-            'event' => $event_name,
+            'event' => '$SignUp',
             'time' => $event_time,
             'distinct_id' => $distinct_id,
             'original_id' => $original_id,
