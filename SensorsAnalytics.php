@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.3.2');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.4.0');
 
 class SensorsAnalyticsException extends Exception {
 }
@@ -20,6 +20,7 @@ class SensorsAnalyticsDebugException extends Exception {
 class SensorsAnalytics {
 
     private $_consumer;
+    private $_super_properties;
 
     /**
      * 初始化一个 SensorsAnalytics 的实例用于数据发送。
@@ -28,32 +29,9 @@ class SensorsAnalytics {
      */
     public function __construct($consumer) {
         $this->_consumer = $consumer;
+        $this->clear_super_properties();
     }
-
-    /**
-     * 跟踪一个用户的行为。
-     *
-     * @param string $distinct_id 用户的唯一标识。
-     * @param string $event_name 事件名称。
-     * @param array $properties 事件的属性。
-     */
-    public function track($distinct_id, $event_name, $properties = array()) {
-        $event_time = $this->_extract_user_time($properties);
-        $all_properties = $this->_get_common_properties();
-        if ($properties) {
-            $all_properties = array_merge($all_properties, $properties);
-        }
-        $data = array(
-            'type' => 'track',
-            'event' => $event_name,
-            'time' => $event_time,
-            'distinct_id' => $distinct_id,
-            'properties' => $all_properties,
-        );
-        $data = $this->_normalize_data($data);
-        $this->_consumer->send($this->_json_dumps($data));
-    }
-
+ 
     private function _normalize_data($data) {
         // 检查 distinct_id
         if (!isset($data['distinct_id']) or strlen($data['distinct_id']) == 0) {
@@ -83,7 +61,7 @@ class SensorsAnalytics {
         }
 
         // 检查 properties
-        if (isset($data['properties'])) {
+        if (isset($data['properties']) && is_array($data['properties'])) {
             foreach ($data['properties'] as $key => $value) {
                 if (!is_string($key)) {
                     throw new SensorsAnalyticsIllegalDataException("property key must be a str. [key=$key]");
@@ -94,7 +72,7 @@ class SensorsAnalytics {
 
                 // 只支持简单类型或数组或DateTime类
                 if (!is_scalar($value) && !is_array($value) && !$value instanceof DateTime) {
-                    throw new SensorsAnalyticsIllegalDataException("property value must be a str/int/float/datetime/list. [key='$key']");
+                    throw new SensorsAnalyticsIllegalDataException("property value must be a str/int/float/datetime/list. [key='$key' value='$value']");
                 }
 
                 // 如果是 DateTime，Format 成字符串
@@ -115,6 +93,8 @@ class SensorsAnalytics {
                     }
                 }
             }
+        } else {
+            throw new SensorsAnalyticsIllegalDataException("property must be an array.");
         }
         return $data;
     }
@@ -135,15 +115,48 @@ class SensorsAnalytics {
     }
 
     /**
-     * 返回公共的属性。
-     *
-     * @return array
+     * 返回埋点管理相关属性，由于该函数依赖函数栈信息，因此修改调用关系时，一定要谨慎
      */
-    private function _get_common_properties() {
-        return array(
-            '$lib' => 'php',
-            '$lib_version' => SENSORS_ANALYTICS_SDK_VERSION,
-        );
+    private function _get_lib_properties() {
+        $lib_properties = array(
+                '$lib' => 'php',
+                '$lib_version' => SENSORS_ANALYTICS_SDK_VERSION,
+                '$lib_method' => 'code',
+                );
+        
+        if (isset($this->_super_properties['$app_version'])) {
+            $lib_properties['$app_version'] = $this->_super_properties['$app_version']; 
+        }
+        
+        try {
+            throw new Exception("");
+        } catch (Exception $e) {
+            $trace = $e->getTrace();
+            if (count($trace) == 3) {
+                // 脚本内直接调用
+                $file = $trace[2]['file'];
+                $line = $trace[2]['line'];
+                
+                $lib_properties['$lib_detail'] = "####$file##$line";
+            } else if (count($trace > 3)) {
+                if (isset($trace[3]['class'])) {
+                    // 类成员函数内调用
+                    $class = $trace[3]['class'];
+                } else {
+                    // 全局函数内调用
+                    $class = '';
+                }
+                
+                // XXX: 此处使用 [2] 非笔误，trace 信息就是如此
+                $file = $trace[2]['file'];
+                $line = $trace[2]['line'];
+                $function = $trace[3]['function'];
+
+                $lib_properties['$lib_detail'] = "$class##$function##$file##$line";
+            }
+        }
+        
+        return $lib_properties; 
     }
 
     /**
@@ -157,6 +170,22 @@ class SensorsAnalytics {
     }
 
     /**
+     * 跟踪一个用户的行为。
+     *
+     * @param string $distinct_id 用户的唯一标识。
+     * @param string $event_name 事件名称。
+     * @param array $properties 事件的属性。
+     */
+    public function track($distinct_id, $event_name, $properties = array()) {
+        if ($properties) {
+            $all_properties = array_merge($this->_super_properties, $properties);
+        } else {
+            $all_properties = array_merge($this->_super_properties, array());
+        }
+        return $this->_track_event('track', $event_name, $distinct_id, null, $all_properties);
+    }
+
+    /**
      * 这个接口是一个较为复杂的功能，请在使用前先阅读相关说明:http://www.sensorsdata.cn/manual/track_signup.html，并在必要时联系我们的技术支持人员。
      *
      * @param string $distinct_id 用户注册之后的唯一标识。
@@ -164,28 +193,19 @@ class SensorsAnalytics {
      * @param array $properties 事件的属性。
      */
     public function track_signup($distinct_id, $original_id, $properties = array()) {
-        $event_time = $this->_extract_user_time($properties);
-        $all_properties = $this->_get_common_properties();
         if ($properties) {
-            $all_properties = array_merge($all_properties, $properties);
+            $all_properties = array_merge($this->_super_properties, $properties);
+        } else {
+            $all_properties = array_merge($this->_super_properties, array());
         }
-        $data = array(
-            'type' => 'track_signup',
-            'event' => '$SignUp',
-            'time' => $event_time,
-            'distinct_id' => $distinct_id,
-            'original_id' => $original_id,
-            'properties' => $all_properties,
-        );
         // 检查 original_id
-        if (!isset($data['original_id']) or strlen($data['original_id']) == 0) {
+        if (!$original_id or strlen($original_id) == 0) {
             throw new SensorsAnalyticsIllegalDataException("property [original_id] must not be empty");
         }
-        if (strlen($data['original_id']) > 255) {
+        if (strlen($original_id) > 255) {
             throw new SensorsAnalyticsIllegalDataException("the max length of [original_id] is 255");
         }
-        $data = $this->_normalize_data($data);
-        $this->_consumer->send($this->_json_dumps($data));
+        return $this->_track_event('track_signup', '$SignUp', $distinct_id, $original_id, $all_properties);
     }
 
     /**
@@ -196,7 +216,7 @@ class SensorsAnalytics {
      * @return boolean
      */
     public function profile_set($distinct_id, $profiles = array()) {
-        return $this->_profile_update('profile_set', $distinct_id, $profiles);
+        return $this->_track_event('profile_set', null, $distinct_id, null, $profiles);
     }
 
     /**
@@ -207,27 +227,9 @@ class SensorsAnalytics {
      * @return boolean
      */
     public function profile_set_once($distinct_id, $profiles = array()) {
-        return $this->_profile_update('profile_set_once', $distinct_id, $profiles);
+        return $this->_track_event('profile_set_once', null, $distinct_id, null, $profiles);
     }
-
-    /**
-     * @param string $update_type
-     * @param string $distinct_id
-     * @param array $profiles
-     * @return boolean
-     */
-    public function _profile_update($update_type, $distinct_id, $profiles) {
-        $event_time = $this->_extract_user_time($profiles);
-        $data = array(
-            'type' => $update_type,
-            'properties' => $profiles,
-            'time' => $event_time,
-            'distinct_id' => $distinct_id
-        );
-        $data = $this->_normalize_data($data);
-        return $this->_consumer->send($this->_json_dumps($data));
-    }
-
+    
     /**
      * 增减/减少一个用户的某一个或者多个数值类型的 Profile。
      *
@@ -236,7 +238,7 @@ class SensorsAnalytics {
      * @return boolean
      */
     public function profile_increment($distinct_id, $profiles = array()) {
-        return $this->_profile_update('profile_increment', $distinct_id, $profiles);
+        return $this->_track_event('profile_increment', null, $distinct_id, null, $profiles);
     }
 
     /**
@@ -247,7 +249,7 @@ class SensorsAnalytics {
      * @return boolean
      */
     public function profile_append($distinct_id, $profiles = array()) {
-        return $this->_profile_update('profile_append', $distinct_id, $profiles);
+        return $this->_track_event('profile_append', null, $distinct_id, null, $profiles);
     }
 
     /**
@@ -265,7 +267,7 @@ class SensorsAnalytics {
             }
             $profile_keys = $new_profile_keys;
         }
-        return $this->_profile_update('profile_unset', $distinct_id, $profile_keys);
+        return $this->_track_event('profile_unset', null, $distinct_id, null, $profile_keys);
     }
 
 
@@ -276,7 +278,26 @@ class SensorsAnalytics {
      * @return boolean
      */
     public function profile_delete($distinct_id) {
-        return $this->_profile_update('profile_delete', $distinct_id, array());
+        return $this->_track_event('profile_delete', null, $distinct_id, null, array());
+    }
+
+    /**
+     * 设置每个事件都带有的一些公共属性
+     *
+     * @param super_properties 
+     */
+    public function register_super_properties($super_properties) {
+        $this->_super_properties = array_merge($this->_super_properties, $super_properties);
+    }
+
+    /**
+     * 删除所有已设置的事件公共属性
+     */
+    public function clear_super_properties() {
+        $this->_super_properties = array(
+                '$lib' => 'php',
+                '$lib_version' => SENSORS_ANALYTICS_SDK_VERSION,
+                );
     }
 
     /**
@@ -294,6 +315,35 @@ class SensorsAnalytics {
     public function close() {
         $this->_consumer->close();
     }
+
+    /**
+     * @param string $update_type
+     * @param string $distinct_id
+     * @param array $profiles
+     * @return boolean
+     */
+    public function _track_event($update_type, $event_name, $distinct_id, $original_id, $properties) {
+        $event_time = $this->_extract_user_time($properties);
+
+        $data = array(
+            'type' => $update_type,
+            'properties' => $properties,
+            'time' => $event_time,
+            'distinct_id' => $distinct_id,
+            'lib' => $this->_get_lib_properties(),
+        );
+
+        if (strcmp($update_type, "track") == 0) {
+            $data['event'] = $event_name;
+        } else if (strcmp($update_type, "track_signup") == 0) {
+            $data['event'] = $event_name;
+            $data['original_id'] = $original_id;
+        }
+
+        $data = $this->_normalize_data($data);
+        return $this->_consumer->send($this->_json_dumps($data));
+    }
+
 }
 
 
@@ -438,7 +488,7 @@ class DebugConsumer extends AbstractConsumer {
         $http_response_header = curl_exec($ch);
         if (!$http_response_header) {
             throw new SensorsAnalyticsDebugException(
-                    "Failed to connect to SensorsAnalytics. [error='" + curl_error($ch) + "']"); 
+                   "Failed to connect to SensorsAnalytics. [error='" + curl_error($ch) + "']"); 
         }
         
         $result = array(
