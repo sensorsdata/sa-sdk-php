@@ -2,7 +2,7 @@
 
 define('SENSORS_ANALYTICS_SDK_VERSION', '1.5.0');
 
-class SensorsAnalyticsException extends Exception {
+class SensorsAnalyticsException extends \Exception {
 }
 
 // 在发送的数据格式有误时，SDK会抛出此异常，用户应当捕获并处理。
@@ -14,7 +14,7 @@ class SensorsAnalyticsNetworkException extends SensorsAnalyticsException {
 }
 
 // 当且仅当DEBUG模式中，任何网络错误、数据异常等都会抛出此异常，用户可不捕获，用于测试SDK接入正确性
-class SensorsAnalyticsDebugException extends Exception {
+class SensorsAnalyticsDebugException extends \Exception {
 }
 
 class SensorsAnalytics {
@@ -103,7 +103,7 @@ class SensorsAnalytics {
             }
             // XXX: 解决 PHP 中空 array() 转换成 JSON [] 的问题
             if (count($data['properties']) == 0) {
-                $data['properties'] = new ArrayObject();
+                $data['properties'] = new \ArrayObject();
             }
         } else {
             throw new SensorsAnalyticsIllegalDataException("property must be an array.");
@@ -141,8 +141,8 @@ class SensorsAnalytics {
         }
         
         try {
-            throw new Exception("");
-        } catch (Exception $e) {
+            throw new \Exception("");
+        } catch (\Exception $e) {
             $trace = $e->getTrace();
             if (count($trace) == 3) {
                 // 脚本内直接调用
