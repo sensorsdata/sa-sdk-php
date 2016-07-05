@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.4.0');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.5.0');
 
 class SensorsAnalyticsException extends Exception {
 }
@@ -66,6 +66,10 @@ class SensorsAnalytics {
                 if (!is_string($key)) {
                     throw new SensorsAnalyticsIllegalDataException("property key must be a str. [key=$key]");
                 }
+                if (strlen($data['distinct_id']) > 255) {
+                    throw new SensorsAnalyticsIllegalDataException("the max length of property key is 256. [key=$key]");
+                }
+
                 if (!preg_match($name_pattern, $key)) {
                     throw new SensorsAnalyticsIllegalDataException("property key must be a valid variable name. [key='$key']]");
                 }
@@ -80,6 +84,10 @@ class SensorsAnalytics {
                     $data['properties'][$key] = $value->format("Y-m-d H:i:s.0");
                 }
 
+                if (is_string($value) && strlen($data['distinct_id']) > 8191) {
+                    throw new SensorsAnalyticsIllegalDataException("the max length of property value is 8191. [key=$key]");
+                }
+
                 // 如果是数组，只支持 Value 是字符串格式的简单非关联数组
                 if (is_array($value)) {
                     if (array_values($value) !== $value) {
@@ -92,6 +100,10 @@ class SensorsAnalytics {
                         }
                     }
                 }
+            }
+            // XXX: 解决 PHP 中空 array() 转换成 JSON [] 的问题
+            if (count($data['properties']) == 0) {
+                $data['properties'] = new ArrayObject();
             }
         } else {
             throw new SensorsAnalyticsIllegalDataException("property must be an array.");
@@ -450,6 +462,9 @@ class DebugConsumer extends AbstractConsumer {
             printf("invalid message: %s\n", $msg);
             printf("ret_code: %d\n", $response['ret_code']);
             printf("ret_content: %s\n", $response['ret_content']);
+        }
+
+        if ($response['ret_code'] >= 300) {
             throw new SensorsAnalyticsDebugException("Unexpected response from SensorsAnalytics.");
         }
     }
