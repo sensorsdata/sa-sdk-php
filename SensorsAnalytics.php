@@ -155,7 +155,7 @@ class SensorsAnalytics {
                 $line = $trace[2]['line'];
                 
                 $lib_properties['$lib_detail'] = "####$file##$line";
-            } else if (count($trace > 3)) {
+            } else if (count($trace) > 3) {
                 if (isset($trace[3]['class'])) {
                     // 类成员函数内调用
                     $class = $trace[3]['class'];
@@ -192,6 +192,7 @@ class SensorsAnalytics {
      * @param string $distinct_id 用户的唯一标识。
      * @param string $event_name 事件名称。
      * @param array $properties 事件的属性。
+     * @return bool
      */
     public function track($distinct_id, $event_name, $properties = array()) {
         if ($properties) {
@@ -208,6 +209,8 @@ class SensorsAnalytics {
      * @param string $distinct_id 用户注册之后的唯一标识。
      * @param string $original_id 用户注册前的唯一标识。
      * @param array $properties 事件的属性。
+     * @return bool
+     * @throws SensorsAnalyticsIllegalDataException
      */
     public function track_signup($distinct_id, $original_id, $properties = array()) {
         if ($properties) {
@@ -335,9 +338,12 @@ class SensorsAnalytics {
 
     /**
      * @param string $update_type
+     * @param $event_name
      * @param string $distinct_id
-     * @param array $profiles
-     * @return boolean
+     * @param $original_id
+     * @param $properties
+     * @return bool
+     * @internal param array $profiles
      */
     public function _track_event($update_type, $event_name, $distinct_id, $original_id, $properties) {
         $event_time = $this->_extract_user_time($properties);
@@ -508,7 +514,7 @@ class DebugConsumer extends AbstractConsumer {
         $http_response_header = curl_exec($ch);
         if (!$http_response_header) {
             throw new SensorsAnalyticsDebugException(
-                   "Failed to connect to SensorsAnalytics. [error='" + curl_error($ch) + "']"); 
+                   "Failed to connect to SensorsAnalytics. [error='" + curl_error($ch) + "']");
         }
         
         $result = array(
@@ -522,7 +528,7 @@ class DebugConsumer extends AbstractConsumer {
     /**
      * 对待发送的数据进行编码
      *
-     * @param string $msg_list
+     * @param array $msg_list
      * @return string
      */
     private function _encode_msg_list($msg_list) {
@@ -612,7 +618,7 @@ class BatchConsumer extends AbstractConsumer {
     /**
      * 对待发送的数据进行编码
      *
-     * @param string $msg_list
+     * @param array $msg_list
      * @return string
      */
     private function _encode_msg_list($msg_list) {
