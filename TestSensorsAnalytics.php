@@ -1,5 +1,6 @@
 <?php
 require_once("SensorsAnalytics.php");
+date_default_timezone_set("Asia/Shanghai");
 
 class NormalTest extends PHPUnit_Framework_TestCase {
     public function setUp() {
@@ -13,17 +14,17 @@ class NormalTest extends PHPUnit_Framework_TestCase {
         $consumer = new FileConsumer($test_file);
         $sa = new SensorsAnalytics($consumer);
         $now = (int)(microtime(true) * 1000);
-        $sa->track('1234', 'Test', array('From' => 'Baidu', '$time' => $now));
-        $sa->track_signup('1234', 'abcd', 'Signup', array('Channel' => 'Hongbao'));
-        $sa->profile_delete('1234');
-        $sa->profile_append('1234', array('Gender' => 'Male'));
-        $sa->profile_increment('1234', array('CardNum' => 1));
-        $sa->profile_set('1234', array('City' => '北京'));
-        $sa->profile_unset('1234', array('City'));
-        $sa->profile_unset('1234', array('Province' => true));
+        $sa->track('1234', true, 'Test', array('From' => 'Baidu', '$time' => $now));
+        $sa->track_signup('1234', 'abcd', array('Channel' => 'Hongbao'));
+        $sa->profile_delete('1234', true);
+        $sa->profile_append('1234', true, array('Gender' => 'Male'));
+        $sa->profile_increment('1234', true, array('CardNum' => 1));
+        $sa->profile_set('1234', true, array('City' => '北京'));
+        $sa->profile_unset('1234', true, array('City'));
+        $sa->profile_unset('1234', true, array('Province' => true));
         $dt = new DateTime();
         $dt->setTimestamp($now / 1000.0);
-        $sa->profile_set('1234', array('$signup_time' => $dt));
+        $sa->profile_set('1234', true, array('$signup_time' => $dt));
         $file_contents = file_get_contents($test_file);
 
         $list = explode("\n", $file_contents);
@@ -64,15 +65,15 @@ class NormalTest extends PHPUnit_Framework_TestCase {
             $this->returnCallback(array($this, '_mock_do_request')));
         $sa = new SensorsAnalytics($stub_consumer);
         $this->_msg_count = 0;
-        $sa->track(1234, 'Test', array('From' => 'Baidu'));
-        $sa->track(1234, 'Test', array('From' => 'Baidu', '$time' => 1437816376));
-        $sa->track(1234, 'Test', array('From' => 'Baidu', '$time' => 1437816376000));
-        $sa->track(1234, 'Test', array('From' => 'Baidu', '$time' => '1437816376'));
-        $sa->track(1234, 'Test', array('From' => 'Baidu', '$time' => '1437816376000'));
-        $sa->track(1234, 'Tes123_$t', array('From' => 'Baidu', '$time' => '1437816376000'));
-        $sa->track(1234, 'Tes123_$t', array('From' => 'Baidu', '$time' => '1437816376000', 'Test' => 1437816376000999933));
-        $sa->profile_set(1234, array('From' => 'Baidu'));
-        $sa->profile_set(1234, array('From' => 'Baidu', 'asd' => array("asd", "bbb")));
+        $sa->track(1234, true, 'Test', array('From' => 'Baidu'));
+        $sa->track(1234, true, 'Test', array('From' => 'Baidu', '$time' => 1437816376));
+        $sa->track(1234, true, 'Test', array('From' => 'Baidu', '$time' => 1437816376000));
+        $sa->track(1234, true, 'Test', array('From' => 'Baidu', '$time' => '1437816376'));
+        $sa->track(1234, true, 'Test', array('From' => 'Baidu', '$time' => '1437816376000'));
+        $sa->track(1234, true, 'Tes123_$t', array('From' => 'Baidu', '$time' => '1437816376000'));
+        $sa->track(1234, true, 'Tes123_$t', array('From' => 'Baidu', '$time' => '1437816376000', 'Test' => 1437816376000999933));
+        $sa->profile_set(1234, true, array('From' => 'Baidu'));
+        $sa->profile_set(1234, true, array('From' => 'Baidu', 'asd' => array("asd", "bbb")));
     }
 
     /**
@@ -81,7 +82,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
      */
     public function testException1() {
         $sa = new SensorsAnalytics(null);
-        $sa->track(null, 'test', array('from' => 'baidu'));
+        $sa->track(null, true, 'test', array('from' => 'baidu'));
     }
 
     /**
@@ -90,7 +91,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
      */
     public function testException2() {
         $sa = new SensorsAnalytics(null);
-        $sa->track(1234, 'Test', array('From' => 'Baidu', '$time' => 1234));
+        $sa->track(1234, true, 'Test', array('From' => 'Baidu', '$time' => 1234));
     }
 
     /**
@@ -99,7 +100,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
      */
     public function testException3() {
         $sa = new SensorsAnalytics(null);
-        $sa->track(1234, 'Test', array(123 => 'Baidu'));
+        $sa->track(1234, true, 'Test', array(123 => 'Baidu'));
     }
 
     /**
@@ -108,7 +109,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
      */
     public function testException4() {
         $sa = new SensorsAnalytics(null);
-        $sa->track(1234, 'Test 123', array(123 => 'Baidu'));
+        $sa->track(1234, true, 'Test 123', array(123 => 'Baidu'));
     }
 
     /**
@@ -117,7 +118,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
      */
     public function testException5() {
         $sa = new SensorsAnalytics(null);
-        $sa->track(1234, 'TestEvent', array('TestProperty' => new SensorsAnalytics(null)));
+        $sa->track(1234, true, 'TestEvent', array('TestProperty' => new SensorsAnalytics(null)));
     }
 
     /**
@@ -126,7 +127,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
      */
     public function testException6() {
         $sa = new SensorsAnalytics(null);
-        $sa->track(1234, 'Test', array('distincT_id' => 'SensorsData'));
+        $sa->track(1234, true, 'Test', array('distincT_id' => 'SensorsData'));
     }
 
     /**
@@ -135,7 +136,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
      */
     public function testException7() {
         $sa = new SensorsAnalytics(null);
-        $sa->track(1234, 'TestEvent', array('a123456789a123456789a123456789a123456789a123456789a123456789a123456789a123456789a123456789a1234567890' => 'SensorsData'));
+        $sa->track(1234, true, 'TestEvent', array('a123456789a123456789a123456789a123456789a123456789a123456789a123456789a123456789a123456789a1234567890' => 'SensorsData'));
     }
 
     /**
@@ -144,7 +145,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
      */
     public function testException8() {
         $sa = new SensorsAnalytics(null);
-        $sa->track(1234, 'TestEvent', array('TestProperty' => array(123)));
+        $sa->track(1234, true, 'TestEvent', array('TestProperty' => array(123)));
     }
 
     /**
@@ -155,7 +156,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
         $sa = new SensorsAnalytics(null);
         $a = array("b" => 123);
         $c = array(123);
-        $sa->track(1234, 'TestEvent', array('TestProperty' => array("a" => 123)));
+        $sa->track(1234, true, 'TestEvent', array('TestProperty' => array("a" => 123)));
     }
 
 
@@ -165,7 +166,7 @@ class NormalTest extends PHPUnit_Framework_TestCase {
      */
     public function testException10() {
         $sa = new SensorsAnalytics(null);
-        $sa->track('abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz', 'TestEvent', array('test_key' => 'SensorsData'));
+        $sa->track('abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz', true, 'TestEvent', array('test_key' => 'SensorsData'));
     }
 
     public function testBatchConsumerMock() {
@@ -178,49 +179,49 @@ class NormalTest extends PHPUnit_Framework_TestCase {
 
         $sa = new SensorsAnalytics($stub_consumer);
         $this->_msg_count = 0;
-        $sa->track('1234', 'Test', array('From' => 'Baidu'));
-        $sa->track_signup('1234', 'abcd', 'Signup', array('Channel' => 'Hongbao'));
-        $sa->profile_delete('1234');
-        $sa->profile_append('1234', array('Gender' => 'Male'));
-        $sa->profile_increment('1234', array('CardNum' => 1));
-        $sa->profile_set('1234', array('City' => '北京'));
-        $sa->profile_unset('1234', array('City'));
+        $sa->track('1234', true, 'Test', array('From' => 'Baidu'));
+        $sa->track_signup('1234', 'abcd', array('Channel' => 'Hongbao'));
+        $sa->profile_delete('1234', true);
+        $sa->profile_append('1234', true, array('Gender' => 'Male'));
+        $sa->profile_increment('1234', true, array('CardNum' => 1));
+        $sa->profile_set('1234', true, array('City' => '北京'));
+        $sa->profile_unset('1234', true, array('City'));
         $this->assertEquals($this->_msg_count, 0);
         $sa->flush();
         $this->assertEquals($this->_msg_count, 7);
         for ($i = 0; $i < 49; $i++) {
-            $sa->profile_set('1234', array('City' => '北京'));
+            $sa->profile_set('1234', true, array('City' => '北京'));
         }
         $this->assertEquals($this->_msg_count, 7);
-        $sa->profile_set('1234', array('City' => '北京'));
+        $sa->profile_set('1234', true, array('City' => '北京'));
         $this->assertEquals($this->_msg_count, 57);
     }
 
     public function testBatchConsumer() {
         $consumer = new BatchConsumer("http://git.sensorsdata.cn/test");
         $sa = new SensorsAnalytics($consumer);
-        $sa->track('1234', 'Test', array('From' => 'Baidu'));
-        $sa->track_signup('1234', 'abcd', 'Signup', array('Channel' => 'Hongbao'));
-        $sa->profile_delete('1234');
-        $sa->profile_append('1234', array('Gender' => 'Male'));
-        $sa->profile_increment('1234', array('CardNum' => 1));
-        $sa->profile_set('1234', array('City' => '北京'));
-        $sa->profile_unset('1234', array('City'));
+        $sa->track('1234', true, 'Test', array('From' => 'Baidu'));
+        $sa->track_signup('1234', 'abcd', array('Channel' => 'Hongbao'));
+        $sa->profile_delete('1234', true);
+        $sa->profile_append('1234', true, array('Gender' => 'Male'));
+        $sa->profile_increment('1234', true, array('CardNum' => 1));
+        $sa->profile_set('1234', true, array('City' => '北京'));
+        $sa->profile_unset('1234', true, array('City'));
         $sa->flush();
         for ($i = 0; $i < 49; $i++) {
-            $sa->profile_set('1234', array('City' => '北京'));
+            $sa->profile_set('1234', true, array('City' => '北京'));
         }
-        $sa->profile_set('1234', array('City' => '北京'));
+        $sa->profile_set('1234', true, array('City' => '北京'));
         $sa->close();
     }
 
     public function testDebugConsumer() {
-        $consumer = new DebugConsumer('http://10.10.229.134:8001/debug', false);
+        $consumer = new DebugConsumer('http://10.10.11.209:8006/debug?project=default&token=bbb', false);
         $sa = new SensorsAnalytics($consumer);
-        $sa->track('1234', 'Test', array('PhpTestProperty' => 'Baidu'));
-        $consumer = new DebugConsumer('http://10.10.229.134:8001/debug', true);
+        $sa->track('1234', true, 'Test', array('PhpTestProperty' => 'Baidu'));
+        $consumer = new DebugConsumer('http://10.10.11.209:8006/debug?project=default&token=bbb', true);
         $sa = new SensorsAnalytics($consumer);
-        $sa->track('1234', 'Test', array('PhpTestProperty' => 123));
-        $sa->track('1234', 'Test', array('PhpTestProperty' => 'Baidu'));
+        $sa->track('1234', true, 'Test', array('PhpTestProperty' => 123));
+        $sa->track('1234', true, 'Test', array('PhpTestProperty' => 'Baidu'));
     }
 }

@@ -81,7 +81,7 @@ class SensorsAnalytics {
 
                 // 只支持简单类型或数组或DateTime类
                 if (!is_scalar($value) && !is_array($value) && !$value instanceof DateTime) {
-                    throw new SensorsAnalyticsIllegalDataException("property value must be a str/int/float/datetime/list. [key='$key' value='$value']");
+                    throw new SensorsAnalyticsIllegalDataException("property value must be a str/int/float/datetime/list. [key='$key']");
                 }
 
                 // 如果是 DateTime，Format 成字符串
@@ -190,17 +190,18 @@ class SensorsAnalytics {
      * 跟踪一个用户的行为。
      *
      * @param string $distinct_id 用户的唯一标识。
+     * @param bool $is_login_id 用户标识是否是登录 ID，false 表示该标识是一个匿名 ID。
      * @param string $event_name 事件名称。
      * @param array $properties 事件的属性。
      * @return bool
      */
-    public function track($distinct_id, $event_name, $properties = array()) {
+    public function track($distinct_id, $is_login_id, $event_name, $properties = array()) {
         if ($properties) {
             $all_properties = array_merge($this->_super_properties, $properties);
         } else {
             $all_properties = array_merge($this->_super_properties, array());
         }
-        return $this->_track_event('track', $event_name, $distinct_id, null, $all_properties);
+        return $this->_track_event('track', $event_name, $distinct_id, $is_login_id, null, $all_properties);
     }
 
     /**
@@ -225,61 +226,66 @@ class SensorsAnalytics {
         if (strlen($original_id) > 255) {
             throw new SensorsAnalyticsIllegalDataException("the max length of [original_id] is 255");
         }
-        return $this->_track_event('track_signup', '$SignUp', $distinct_id, $original_id, $all_properties);
+        return $this->_track_event('track_signup', '$SignUp', $distinct_id, false, $original_id, $all_properties);
     }
 
     /**
      * 直接设置一个用户的 Profile，如果已存在则覆盖。
      *
-     * @param string $distinct_id
+     * @param string $distinct_id 用户的唯一标识。
+     * @param bool $is_login_id 用户标识是否是登录 ID，false 表示该标识是一个匿名 ID。
      * @param array $profiles
-     * @return boolean
+     * @return bool
      */
-    public function profile_set($distinct_id, $profiles = array()) {
-        return $this->_track_event('profile_set', null, $distinct_id, null, $profiles);
+    public function profile_set($distinct_id, $is_login_id, $profiles = array()) {
+        return $this->_track_event('profile_set', null, $distinct_id, $is_login_id, null, $profiles);
     }
 
     /**
      * 直接设置一个用户的 Profile，如果某个 Profile 已存在则不设置。
      *
-     * @param string $distinct_id
+     * @param string $distinct_id 用户的唯一标识。
+     * @param bool $is_login_id 用户标识是否是登录 ID，false 表示该标识是一个匿名 ID。
      * @param array $profiles
-     * @return boolean
+     * @return bool
      */
-    public function profile_set_once($distinct_id, $profiles = array()) {
+    public function profile_set_once($distinct_id, $is_login_id, $profiles = array()) {
         return $this->_track_event('profile_set_once', null, $distinct_id, null, $profiles);
     }
     
     /**
      * 增减/减少一个用户的某一个或者多个数值类型的 Profile。
      *
-     * @param string $distinct_id
+     * @param string $distinct_id 用户的唯一标识。
+     * @param bool $is_login_id 用户标识是否是登录 ID，false 表示该标识是一个匿名 ID。
      * @param array $profiles
-     * @return boolean
+     * @return bool
      */
-    public function profile_increment($distinct_id, $profiles = array()) {
-        return $this->_track_event('profile_increment', null, $distinct_id, null, $profiles);
+    public function profile_increment($distinct_id, $is_login_id, $profiles = array()) {
+        return $this->_track_event('profile_increment', null, $distinct_id, $is_login_id, null, $profiles);
     }
 
     /**
      * 追加一个用户的某一个或者多个集合类型的 Profile。
      *
-     * @param string $distinct_id
+     * @param string $distinct_id 用户的唯一标识。
+     * @param bool $is_login_id 用户标识是否是登录 ID，false 表示该标识是一个匿名 ID。
      * @param array $profiles
-     * @return boolean
+     * @return bool
      */
-    public function profile_append($distinct_id, $profiles = array()) {
-        return $this->_track_event('profile_append', null, $distinct_id, null, $profiles);
+    public function profile_append($distinct_id, $is_login_id, $profiles = array()) {
+        return $this->_track_event('profile_append', null, $distinct_id, $is_login_id, null, $profiles);
     }
 
     /**
      * 删除一个用户的一个或者多个 Profile。
      *
-     * @param string $distinct_id
+     * @param string $distinct_id 用户的唯一标识。
+     * @param bool $is_login_id 用户标识是否是登录 ID，false 表示该标识是一个匿名 ID。
      * @param array $profile_keys
-     * @return boolean
+     * @return bool
      */
-    public function profile_unset($distinct_id, $profile_keys = array()) {
+    public function profile_unset($distinct_id, $is_login_id, $profile_keys = array()) {
         if ($profile_keys != null && array_key_exists(0, $profile_keys)) {
             $new_profile_keys = array();
             foreach ($profile_keys as $key) {
@@ -287,18 +293,19 @@ class SensorsAnalytics {
             }
             $profile_keys = $new_profile_keys;
         }
-        return $this->_track_event('profile_unset', null, $distinct_id, null, $profile_keys);
+        return $this->_track_event('profile_unset', null, $distinct_id, $is_login_id, null, $profile_keys);
     }
 
 
     /**
      * 删除整个用户的信息。
      *
-     * @param $distinct_id
-     * @return boolean
+     * @param string $distinct_id 用户的唯一标识。
+     * @param bool $is_login_id 用户标识是否是登录 ID，false 表示该标识是一个匿名 ID。
+     * @return bool
      */
-    public function profile_delete($distinct_id) {
-        return $this->_track_event('profile_delete', null, $distinct_id, null, array());
+    public function profile_delete($distinct_id, $is_login_id) {
+        return $this->_track_event('profile_delete', null, $distinct_id, $is_login_id, null, array());
     }
 
     /**
@@ -338,15 +345,20 @@ class SensorsAnalytics {
 
     /**
      * @param string $update_type
-     * @param $event_name
+     * @param string $event_name
      * @param string $distinct_id
-     * @param $original_id
-     * @param $properties
+     * @param bool $is_login_id
+     * @param string $original_id
+     * @param array $properties
      * @return bool
      * @internal param array $profiles
      */
-    public function _track_event($update_type, $event_name, $distinct_id, $original_id, $properties) {
+    public function _track_event($update_type, $event_name, $distinct_id, $is_login_id, $original_id, $properties) {
         $event_time = $this->_extract_user_time($properties);
+
+        if ($is_login_id) {
+            $properties['$is_login_id'] = true;
+        }
 
         $data = array(
             'type' => $update_type,
@@ -376,14 +388,14 @@ abstract class AbstractConsumer {
      * 发送一条消息。
      *
      * @param string $msg 发送的消息体
-     * @return boolean
+     * @return bool
      */
     public abstract function send($msg);
 
     /**
      * 立即发送所有未发出的数据。
      *
-     * @return boolean
+     * @return bool
      */
     public function flush() {
     }
@@ -391,7 +403,7 @@ abstract class AbstractConsumer {
     /**
      * 关闭 Consumer 并释放资源。
      *
-     * @return boolean
+     * @return bool
      */
     public function  close() {
     }
