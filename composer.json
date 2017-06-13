@@ -1,0 +1,21 @@
+{
+    "name": "sensorsdata/sa-sdk-php",
+    "type": "library",
+    "homepage": "http://sensorsdata.cn",
+    "description": "PHP SDK for Sensors Analytics",
+    "keywords": ["sdk", "sensorsdata"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Fu Lili",
+            "email": "fulili@sensorsdata.cn"
+        }
+    ],
+    "require": {
+        "php": ">=5.5.0"
+    },
+    "autoload": {
+        "files": ["SensorsAnalytics.php"]
+    },
+    "minimum-stability": "stable"
+}
