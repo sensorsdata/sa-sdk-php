@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.7.0');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.7.2');
 
 class SensorsAnalyticsException extends \Exception {
 }
@@ -196,6 +196,12 @@ class SensorsAnalytics {
      * @return bool
      */
     public function track($distinct_id, $is_login_id, $event_name, $properties = array()) {
+        if (!is_string($event_name)) {
+            throw new SensorsAnalyticsIllegalDataException("event name must be a str.");
+        }
+        if (!is_bool($is_login_id)) {
+            throw new SensorsAnalyticsIllegalDataException("is_login_id must be a bool.");
+        }
         if ($properties) {
             $all_properties = array_merge($this->_super_properties, $properties);
         } else {
@@ -238,6 +244,9 @@ class SensorsAnalytics {
      * @return bool
      */
     public function profile_set($distinct_id, $is_login_id, $profiles = array()) {
+        if (!is_bool($is_login_id)) {
+            throw new SensorsAnalyticsIllegalDataException("is_login_id must be a bool.");
+        }
         return $this->_track_event('profile_set', null, $distinct_id, $is_login_id, null, $profiles);
     }
 
@@ -250,6 +259,9 @@ class SensorsAnalytics {
      * @return bool
      */
     public function profile_set_once($distinct_id, $is_login_id, $profiles = array()) {
+        if (!is_bool($is_login_id)) {
+            throw new SensorsAnalyticsIllegalDataException("is_login_id must be a bool.");
+        }
         return $this->_track_event('profile_set_once', null, $distinct_id, null, $profiles);
     }
     
@@ -262,6 +274,9 @@ class SensorsAnalytics {
      * @return bool
      */
     public function profile_increment($distinct_id, $is_login_id, $profiles = array()) {
+        if (!is_bool($is_login_id)) {
+            throw new SensorsAnalyticsIllegalDataException("is_login_id must be a bool.");
+        }
         return $this->_track_event('profile_increment', null, $distinct_id, $is_login_id, null, $profiles);
     }
 
@@ -274,6 +289,9 @@ class SensorsAnalytics {
      * @return bool
      */
     public function profile_append($distinct_id, $is_login_id, $profiles = array()) {
+        if (!is_bool($is_login_id)) {
+            throw new SensorsAnalyticsIllegalDataException("is_login_id must be a bool.");
+        }
         return $this->_track_event('profile_append', null, $distinct_id, $is_login_id, null, $profiles);
     }
 
@@ -286,6 +304,9 @@ class SensorsAnalytics {
      * @return bool
      */
     public function profile_unset($distinct_id, $is_login_id, $profile_keys = array()) {
+        if (!is_bool($is_login_id)) {
+            throw new SensorsAnalyticsIllegalDataException("is_login_id must be a bool.");
+        }
         if ($profile_keys != null && array_key_exists(0, $profile_keys)) {
             $new_profile_keys = array();
             foreach ($profile_keys as $key) {
@@ -305,6 +326,9 @@ class SensorsAnalytics {
      * @return bool
      */
     public function profile_delete($distinct_id, $is_login_id) {
+        if (!is_bool($is_login_id)) {
+            throw new SensorsAnalyticsIllegalDataException("is_login_id must be a bool.");
+        }
         return $this->_track_event('profile_delete', null, $distinct_id, $is_login_id, null, array());
     }
 
