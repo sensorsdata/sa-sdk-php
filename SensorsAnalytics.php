@@ -17,11 +17,6 @@ class SensorsAnalyticsNetworkException extends SensorsAnalyticsException {
 class SensorsAnalyticsDebugException extends \Exception {
 }
 
-// 不支持 Windows，因为 Windows 版本的 PHP 都不支持 long
-if (strtoupper(substr(PHP_OS, 0, 3)) == "WIN") {
-    throw new SensorsAnalyticsException("Sensors Analytics PHP SDK dons't not support Windows");
-}
-
 class SensorsAnalytics {
 
     private $_consumer;
@@ -33,6 +28,10 @@ class SensorsAnalytics {
      * @param AbstractConsumer $consumer
      */
     public function __construct($consumer) {
+        // 不支持 Windows，因为 Windows 版本的 PHP 都不支持 long
+        if (strtoupper(substr(PHP_OS, 0, 3)) == "WIN") {
+            throw new SensorsAnalyticsException("Sensors Analytics PHP SDK dons't not support Windows");
+        }
         $this->_consumer = $consumer;
         $this->clear_super_properties();
     }
