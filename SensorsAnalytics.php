@@ -261,7 +261,7 @@ class SensorsAnalytics {
         if (!is_bool($is_login_id)) {
             throw new SensorsAnalyticsIllegalDataException("is_login_id must be a bool.");
         }
-        return $this->_track_event('profile_set_once', null, $distinct_id, null, $profiles);
+        return $this->_track_event('profile_set_once', null, $distinct_id, $is_login_id, null, $profiles);
     }
     
     /**
