@@ -70,7 +70,7 @@ class SensorsAnalytics {
                 if (!is_string($key)) {
                     throw new SensorsAnalyticsIllegalDataException("property key must be a str. [key=$key]");
                 }
-                if (strlen($data['distinct_id']) > 255) {
+                if (strlen($key) > 255) {
                     throw new SensorsAnalyticsIllegalDataException("the max length of property key is 256. [key=$key]");
                 }
 
