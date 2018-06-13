@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.7.2');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.10.0');
 
 class SensorsAnalyticsException extends \Exception {
 }
@@ -21,16 +21,17 @@ class SensorsAnalytics {
 
     private $_consumer;
     private $_super_properties;
-
+    private $_is_win;
     /**
      * 初始化一个 SensorsAnalytics 的实例用于数据发送。
      *
      * @param AbstractConsumer $consumer
      */
     public function __construct($consumer) {
+        $this->_is_win = false;
         // 不支持 Windows，因为 Windows 版本的 PHP 都不支持 long
         if (strtoupper(substr(PHP_OS, 0, 3)) == "WIN") {
-            throw new SensorsAnalyticsException("Sensors Analytics PHP SDK dons't not support Windows");
+            $this->_is_win = true;
         }
         $this->_consumer = $consumer;
         $this->clear_super_properties();
@@ -47,14 +48,33 @@ class SensorsAnalytics {
         $data['distinct_id'] = strval($data['distinct_id']);
 
         // 检查 time
-        $ts = (int)($data['time']);
-        $ts_num = strlen($ts);
-        if ($ts_num < 10 || $ts_num > 13) {
-            throw new SensorsAnalyticsIllegalDataException("property [time] must be a timestamp in microseconds");
-        }
+        if ($this->_is_win) { // windows use string(windows 32bit do not support int64)
+            if (!is_string($data['time'])) {
+                throw new SensorsAnalyticsIllegalDataException("property [time] type must be string");
+            }
+            $ts = $data['time'];
+            $ts_num = strlen($ts);
+            if (strlen($ts_num) == 15) {
+                $ts = substr($ts, 0, 13);
+            }
 
-        if ($ts_num == 10) {
-            $ts *= 1000;
+            if ($ts_num < 10 || $ts_num > 13) {
+                throw new SensorsAnalyticsIllegalDataException("property [time] must be a timestamp in microseconds");
+            }
+
+            if ($ts_num == 10) {
+                $ts .= "000";
+            }
+        } else { // linux use int
+            $ts = (int)($data['time']);
+            $ts_num = strlen($ts);
+            if ($ts_num < 10 || $ts_num > 13) {
+                throw new SensorsAnalyticsIllegalDataException("property [time] must be a timestamp in microseconds");
+            }
+
+            if ($ts_num == 10) {
+                $ts *= 1000;
+            }
         }
         $data['time'] = $ts;
 
@@ -119,7 +139,7 @@ class SensorsAnalytics {
      * 如果用户传入了 $time 字段，则不使用当前时间。
      *
      * @param array $properties
-     * @return int
+     * @return int/string
      */
     private function _extract_user_time(&$properties = array()) {
         if (array_key_exists('$time', $properties)) {
@@ -127,7 +147,11 @@ class SensorsAnalytics {
             unset($properties['$time']);
             return $time;
         }
-        return (int)(microtime(true) * 1000);
+        if ($this->_is_win) { // windows return string
+            return substr((microtime(true) * 1000), 0, 13);
+        } else {
+            return (int)(microtime(true) * 1000);
+        }
     }
 
     /**
