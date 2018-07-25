@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.10.0');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.10.1');
 
 class SensorsAnalyticsException extends \Exception {
 }
@@ -68,7 +68,71 @@ class SensorsAnalytics {
         $this->_project_name = null;
         $this->clear_super_properties();
     }
- 
+
+    private function _assert_key_with_regex($key) {
+        $name_pattern = "/^((?!^distinct_id$|^original_id$|^time$|^properties$|^id$|^first_id$|^second_id$|^users$|^events$|^event$|^user_id$|^date$|^datetime$)[a-zA-Z_$][a-zA-Z\\d_$]{0,99})$/i";
+        if (!preg_match($name_pattern, $key)) {
+            throw new SensorsAnalyticsIllegalDataException("key must be a valid variable key. [key='${key}']");
+        }
+    }
+
+    private function _assert_key($key) {
+        if (strlen($key) == 0) {
+            throw new SensorsAnalyticsIllegalDataException("key must not be empty");
+        }
+        if (strlen($key) > 255) {
+            throw new SensorsAnalyticsIllegalDataException("the max length of key is 255");
+        }
+    }
+
+    private function _assert_properties($properties = array()) {
+        $name_pattern = "/^((?!^distinct_id$|^original_id$|^time$|^properties$|^id$|^first_id$|^second_id$|^users$|^events$|^event$|^user_id$|^date$|^datetime$)[a-zA-Z_$][a-zA-Z\\d_$]{0,99})$/i";
+
+        if (!$properties) {
+            return;
+        }
+
+        foreach ($properties as $key => $value) {
+            if (!is_string($key)) {
+                throw new SensorsAnalyticsIllegalDataException("property key must be a str. [key=$key]");
+            }
+            if (strlen($key) > 255) {
+                throw new SensorsAnalyticsIllegalDataException("the max length of property key is 256. [key=$key]");
+            }
+
+            if (!preg_match($name_pattern, $key)) {
+                throw new SensorsAnalyticsIllegalDataException("property key must be a valid variable name. [key='$key']]");
+            }
+
+            // 只支持简单类型或数组或DateTime类
+            if (!is_scalar($value) && !is_array($value) && !$value instanceof DateTime) {
+                throw new SensorsAnalyticsIllegalDataException("property value must be a str/int/float/datetime/list. [key='$key']");
+            }
+
+            // 如果是 DateTime，Format 成字符串
+            if ($value instanceof DateTime) {
+                $data['properties'][$key] = $value->format("Y-m-d H:i:s.0");
+            }
+
+            if (is_string($value) && strlen($value) > 8191) {
+                throw new SensorsAnalyticsIllegalDataException("the max length of property value is 8191. [key=$key]");
+            }
+
+            // 如果是数组，只支持 Value 是字符串格式的简单非关联数组
+            if (is_array($value)) {
+                if (array_values($value) !== $value) {
+                    throw new SensorsAnalyticsIllegalDataException("[list] property must not be associative. [key='$key']");
+                }
+
+                foreach ($value as $lvalue) {
+                    if (!is_string($lvalue)) {
+                        throw new SensorsAnalyticsIllegalDataException("[list] property's value must be a str. [value='$lvalue']");
+                    }
+                }
+            }
+        }
+    }
+
     private function _normalize_data($data) {
         // 检查 distinct_id
         if (!isset($data['distinct_id']) or strlen($data['distinct_id']) == 0) {
@@ -110,53 +174,15 @@ class SensorsAnalytics {
         }
         $data['time'] = $ts;
 
-        $name_pattern = "/^((?!^distinct_id$|^original_id$|^time$|^properties$|^id$|^first_id$|^second_id$|^users$|^events$|^event$|^user_id$|^date$|^datetime$)[a-zA-Z_$][a-zA-Z\\d_$]{0,99})$/i";
         // 检查 Event Name
-        if (isset($data['event']) && !preg_match($name_pattern, $data['event'])) {
-            throw new SensorsAnalyticsIllegalDataException("event name must be a valid variable name. [name='${data['event']}']");
+        if (isset($data['event'])) {
+            $this->_assert_key_with_regex($data['event']);
         }
 
         // 检查 properties
         if (isset($data['properties']) && is_array($data['properties'])) {
-            foreach ($data['properties'] as $key => $value) {
-                if (!is_string($key)) {
-                    throw new SensorsAnalyticsIllegalDataException("property key must be a str. [key=$key]");
-                }
-                if (strlen($data['distinct_id']) > 255) {
-                    throw new SensorsAnalyticsIllegalDataException("the max length of property key is 256. [key=$key]");
-                }
+            $this->_assert_properties($data['properties']);
 
-                if (!preg_match($name_pattern, $key)) {
-                    throw new SensorsAnalyticsIllegalDataException("property key must be a valid variable name. [key='$key']]");
-                }
-
-                // 只支持简单类型或数组或DateTime类
-                if (!is_scalar($value) && !is_array($value) && !$value instanceof DateTime) {
-                    throw new SensorsAnalyticsIllegalDataException("property value must be a str/int/float/datetime/list. [key='$key']");
-                }
-
-                // 如果是 DateTime，Format 成字符串
-                if ($value instanceof DateTime) {
-                    $data['properties'][$key] = $value->format("Y-m-d H:i:s.0");
-                }
-
-                if (is_string($value) && strlen($data['distinct_id']) > 8191) {
-                    throw new SensorsAnalyticsIllegalDataException("the max length of property value is 8191. [key=$key]");
-                }
-
-                // 如果是数组，只支持 Value 是字符串格式的简单非关联数组
-                if (is_array($value)) {
-                    if (array_values($value) !== $value) {
-                        throw new SensorsAnalyticsIllegalDataException("[list] property must not be associative. [key='$key']");
-                    }
-
-                    foreach ($value as $lvalue) {
-                        if (!is_string($lvalue)) {
-                            throw new SensorsAnalyticsIllegalDataException("[list] property's value must be a str. [value='$lvalue']");
-                        }
-                    }
-                }
-            }
             // XXX: 解决 PHP 中空 array() 转换成 JSON [] 的问题
             if (count($data['properties']) == 0) {
                 $data['properties'] = new \ArrayObject();
@@ -195,11 +221,11 @@ class SensorsAnalytics {
                 '$lib_version' => SENSORS_ANALYTICS_SDK_VERSION,
                 '$lib_method' => 'code',
                 );
-        
+
         if (isset($this->_super_properties['$app_version'])) {
             $lib_properties['$app_version'] = $this->_super_properties['$app_version']; 
         }
-        
+
         try {
             throw new \Exception("");
         } catch (\Exception $e) {
@@ -208,7 +234,7 @@ class SensorsAnalytics {
                 // 脚本内直接调用
                 $file = $trace[2]['file'];
                 $line = $trace[2]['line'];
-                
+
                 $lib_properties['$lib_detail'] = "####$file##$line";
             } else if (count($trace) > 3) {
                 if (isset($trace[3]['class'])) {
@@ -218,7 +244,7 @@ class SensorsAnalytics {
                     // 全局函数内调用
                     $class = '';
                 }
-                
+
                 // XXX: 此处使用 [2] 非笔误，trace 信息就是如此
                 $file = $trace[2]['file'];
                 $line = $trace[2]['line'];
@@ -227,8 +253,8 @@ class SensorsAnalytics {
                 $lib_properties['$lib_detail'] = "$class##$function##$file##$line";
             }
         }
-        
-        return $lib_properties; 
+
+        return $lib_properties;
     }
 
     /**
@@ -319,7 +345,7 @@ class SensorsAnalytics {
         }
         return $this->_track_event('profile_set_once', null, $distinct_id, $is_login_id, null, $profiles);
     }
-    
+
     /**
      * 增减/减少一个用户的某一个或者多个数值类型的 Profile。
      *
@@ -388,9 +414,67 @@ class SensorsAnalytics {
     }
 
     /**
+     * 直接设置一个物品，如果已存在则覆盖。
+     *
+     * @param string $itemType item类型。
+     * @param string $itemId item的唯一标识。
+     * @param array $properties item属性
+     * @return bool
+     */
+    public function item_set($item_type, $item_id, $properties = array()) {
+        return $this->_track_item('item_set', $item_type, $item_id, $properties);
+    }
+
+    /**
+     * 删除一个物品
+     *
+     * @param string $itemType item类型。
+     * @param string $itemId item的唯一标识。
+     * @param array $properties item属性
+     * @return bool
+     */
+    public function item_delete($item_type, $item_id) {
+        return $this->_track_item('item_delete', $item_type, $item_id, null);
+    }
+
+    public function _track_item($action_type, $item_type, $item_id, $properties = array()) {
+        $this->_assert_key_with_regex($item_type);
+        $this->_assert_key($item_id);
+        $this->_assert_properties($properties);
+
+        if ($properties && $properties['$project']) {
+            $event_project = $properties['$project'];
+            unset($properties['$project']);
+        }
+
+        $data = array(
+            'type' => $action_type,
+            'time' => (int)(microtime(true) * 1000),
+            'properties' => $properties,
+            'lib' => $this->_get_lib_properties(),
+            'item_type' => $item_type,
+            'item_id' => $item_id,
+        );
+
+        if ($this->_project_name) {
+            $data['project'] = $this->_project_name;
+        }
+
+        if ($event_project) {
+            $data['project'] = $event_project;
+        }
+
+        if (count($data['properties']) == 0) {
+            $data['properties'] = new \ArrayObject();
+        }
+
+        return $this->_consumer->send($this->_json_dumps($data));
+    }
+
+    /**
      * 设置每个事件都带有的一些公共属性
      *
-     * @param super_properties 
+     * @param super_properties
      */
     public function register_super_properties($super_properties) {
         $this->_super_properties = array_merge($this->_super_properties, $super_properties);

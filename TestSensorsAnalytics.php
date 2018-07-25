@@ -224,4 +224,29 @@ class NormalTest extends PHPUnit_Framework_TestCase {
         $sa->track('1234', true, 'Test', array('PhpTestProperty' => 123));
         $sa->track('1234', true, 'Test', array('PhpTestProperty' => 'Baidu'));
     }
+
+    public function testFileConsumerItem() {
+        $test_file = "php_sdk_test_item";
+        $consumer = new FileConsumer($test_file);
+        $sa = new SensorsAnalytics($consumer);
+
+        $sa->item_set('book', '1234', array('From' => 'Baidu', 'price' => 30));
+        $sa->item_delete('book', '1234');
+
+        $file_contents = file_get_contents($test_file);
+
+        $list = explode("\n", $file_contents);
+        $i = 0;
+        foreach ($list as $key => $item) {
+            if (strlen($item) > 0) {
+                $i++;
+                $list[$key] = json_decode($item, true);
+            }
+        }
+        unlink($test_file);
+
+        $this->assertEquals($list[0]['item_type'], 'book');
+        $this->assertEquals($list[0]['type'], 'item_set');
+        $this->assertEquals($list[1]['type'], 'item_delete');
+    }
 }
