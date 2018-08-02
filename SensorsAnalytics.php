@@ -776,6 +776,7 @@ class BatchConsumer extends AbstractConsumer {
         }
 
         $ch = curl_init();
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_URL, $this->_url_prefix);
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, $this->_request_timeout);
