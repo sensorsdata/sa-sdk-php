@@ -433,14 +433,16 @@ class SensorsAnalytics {
      * @param array $properties item属性
      * @return bool
      */
-    public function item_delete($item_type, $item_id) {
-        return $this->_track_item('item_delete', $item_type, $item_id, null);
+    public function item_delete($item_type, $item_id, $properties = array()) {
+        return $this->_track_item('item_delete', $item_type, $item_id, $properties);
     }
 
     public function _track_item($action_type, $item_type, $item_id, $properties = array()) {
         $this->_assert_key_with_regex($item_type);
         $this->_assert_key($item_id);
         $this->_assert_properties($properties);
+
+        $event_project = null;
 
         if ($properties && $properties['$project']) {
             $event_project = $properties['$project'];
