@@ -444,7 +444,7 @@ class SensorsAnalytics {
 
         $event_project = null;
 
-        if ($properties && $properties['$project']) {
+        if ($properties && isset($properties['$project'])) {
             $event_project = $properties['$project'];
             unset($properties['$project']);
         }
