@@ -755,10 +755,14 @@ class BatchConsumer extends AbstractConsumer {
     }
 
     public function flush() {
-        $ret = $this->_do_request(array(
-            "data_list" => $this->_encode_msg_list($this->_buffers),
-            "gzip" => 1
-        ));
+        if (empty($this->_buffers)) {
+            $ret = false;
+        } else {
+            $ret = $this->_do_request(array(
+                "data_list" => $this->_encode_msg_list($this->_buffers),
+                "gzip" => 1
+            ));
+        }
         if ($ret) {
             $this->_buffers = array();
         }
