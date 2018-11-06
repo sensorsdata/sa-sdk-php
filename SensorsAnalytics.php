@@ -695,7 +695,7 @@ class DebugConsumer extends AbstractConsumer {
         $http_response_header = curl_exec($ch);
         if (!$http_response_header) {
             throw new SensorsAnalyticsDebugException(
-                   "Failed to connect to SensorsAnalytics. [error='" + curl_error($ch) + "']");
+                   "Failed to connect to SensorsAnalytics. [error='".curl_error($ch)."']");
         }
         
         $result = array(
