@@ -23,6 +23,7 @@ class SensorsAnalytics {
     private $_super_properties;
     private $_is_win;
     private $_project_name;
+    private $_trace_index = 2;
 
     /*
      * 为兼容旧版，实现构造函数重载
@@ -245,16 +246,27 @@ class SensorsAnalytics {
                     $class = '';
                 }
 
-                // XXX: 此处使用 [2] 非笔误，trace 信息就是如此
-                $file = $trace[2]['file'];
-                $line = $trace[2]['line'];
-                $function = $trace[3]['function'];
+                // 根据定义的调用栈层级获取信息
+                $file = $trace[$this->_trace_index]['file'];
+                $line = $trace[$this->_trace_index]['line'];
+                $function = $trace[$this->_trace_index + 1]['function'];
 
                 $lib_properties['$lib_detail'] = "$class##$function##$file##$line";
             }
         }
 
         return $lib_properties;
+    }
+
+    /**
+     * 设置 trace 跟踪的层级，找 $lib_detail 需要的信息
+     *
+     * @param integer $_trace_index
+     * @return void
+     */
+    public function setTraceIndex(int $_trace_index = 2)
+    {
+        $this->_trace_index = $_trace_index;
     }
 
     /**
