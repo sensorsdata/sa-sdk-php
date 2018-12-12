@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.10.1');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.10.7');
 
 class SensorsAnalyticsException extends \Exception {
 }
@@ -691,6 +691,12 @@ class DebugConsumer extends AbstractConsumer {
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, implode('&', $params));
         curl_setopt($ch, CURLOPT_USERAGENT, "PHP SDK");
+
+        //judge https
+        $pos = strpos($this->_debug_url_prefix, "https");
+        if ($pos === 0) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        }
         
         $http_response_header = curl_exec($ch);
         if (!$http_response_header) {
@@ -790,6 +796,13 @@ class BatchConsumer extends AbstractConsumer {
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, implode('&', $params));
         curl_setopt($ch, CURLOPT_USERAGENT, "PHP SDK");
+
+        //judge https
+        $pos = strpos($this->_url_prefix, "https");
+        if ($pos === 0) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        }
+
         $ret = curl_exec($ch);
 
         if (false === $ret) {
