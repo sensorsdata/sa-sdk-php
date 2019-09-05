@@ -24,24 +24,13 @@ class SensorsAnalytics {
     private $_is_win;
     private $_project_name;
 
-    /*
-     * 为兼容旧版，实现构造函数重载
-     */
-    public function __construct() {
-        $a = func_get_args(); //获取构造函数中的参数
-        $i = count($a);
-        if (method_exists($this,$f='__construct'.$i)) {
-            call_user_func_array(array($this,$f),$a);
-        }
-    }
-
     /**
      * 初始化一个 SensorsAnalytics 的实例用于数据发送。
      *
      * @param AbstractConsumer $consumer
      * @param AbstractConsumer $project_name
      */
-    public function __construct2($consumer, $project_name) {
+    public function __construct($consumer, $project_name = null) {
         $this->_is_win = false;
         // 不支持 Windows，因为 Windows 版本的 PHP 都不支持 long
         if (strtoupper(substr(PHP_OS, 0, 3)) == "WIN") {
@@ -52,22 +41,6 @@ class SensorsAnalytics {
         $this->clear_super_properties();
     }
 
-    /**
-     * 初始化一个 SensorsAnalytics 的实例用于数据发送。
-     *
-     * @param AbstractConsumer $consumer
-     * @param AbstractConsumer $project_name
-     */
-    public function __construct1($consumer) {
-        $this->_is_win = false;
-        // 不支持 Windows，因为 Windows 版本的 PHP 都不支持 long
-        if (strtoupper(substr(PHP_OS, 0, 3)) == "WIN") {
-            $this->_is_win = true;
-        }
-        $this->_consumer = $consumer;
-        $this->_project_name = null;
-        $this->clear_super_properties();
-    }
 
     private function _assert_key_with_regex($key) {
         $name_pattern = "/^((?!^distinct_id$|^original_id$|^time$|^properties$|^id$|^first_id$|^second_id$|^users$|^events$|^event$|^user_id$|^date$|^datetime$)[a-zA-Z_$][a-zA-Z\\d_$]{0,99})$/i";
