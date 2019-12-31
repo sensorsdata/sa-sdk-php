@@ -15,5 +15,5 @@
 
 ## 开源社区
 神策正在组建开源社区，所以相应的源码也会放在 GitHub 上。
-如果是咨询 SDK 使用问题，请扫码加入神策官方 SDK QQ 讨论群：<br><br>    
+如果是咨询 SDK 使用问题，请扫码加入神策官方 SDK QQ 讨论群，群号 785122381：<br><br>    
 ![ QQ 讨论群](https://raw.githubusercontent.com/sensorsdata/sa-sdk-android/master/docs/qrCode.jpeg)  
