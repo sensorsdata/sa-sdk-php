@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.10.7');
+define('SENSORS_ANALYTICS_SDK_VERSION', '1.10.9');
 
 class SensorsAnalyticsException extends \Exception {
 }
@@ -530,7 +530,7 @@ class SensorsAnalytics {
      *
      */
     public function flush() {
-        $this->_consumer->flush();
+        return $this->_consumer->flush();
     }
 
     /**
@@ -538,7 +538,7 @@ class SensorsAnalytics {
      * 如果发生意外，此方法将抛出异常。
      */
     public function close() {
-        $this->_consumer->close();
+        return $this->_consumer->close();
     }
 
     /**
@@ -773,23 +773,48 @@ class BatchConsumer extends AbstractConsumer {
     private $_max_size;
     private $_url_prefix;
     private $_request_timeout;
+    private $file_handler;
 
     /**
      * @param string $url_prefix 服务器的 URL 地址。
      * @param int $max_size 批量发送的阈值。
      * @param int $request_timeout 请求服务器的超时时间，单位毫秒。
+     * @param boolean $response_info 发送数据请求是否返回详情 默认 false。
+     * @param string $filename 发送数据请求的返回状态及数据落盘记录，必须同时 $response_info 为 ture 时，才会记录。
      */
-    public function __construct($url_prefix, $max_size = 50, $request_timeout = 1000) {
+    public function __construct($url_prefix, $max_size = 50, $request_timeout = 1000, $response_info = false, $filename = false) {
         $this->_buffers = array();
         $this->_max_size = $max_size;
         $this->_url_prefix = $url_prefix;
         $this->_request_timeout = $request_timeout;
+        $this->_response_info = $response_info;
+        try {
+            if($filename !== false && $this->_response_info !== false) {
+                $this->file_handler = fopen($filename, 'a+');
+            }
+        } catch (\Exception $e) {
+            echo $e;
+        }
     }
+    
 
     public function send($msg) {
         $this->_buffers[] = $msg;
         if (count($this->_buffers) >= $this->_max_size) {
             return $this->flush();
+        }
+        // data into cache buffers，back some log
+        if($this->_response_info){
+            $result = array(
+                "ret_content" => "data into cache buffers",
+                "ret_origin_data" => "",
+                "ret_code" => 900,
+            );
+            if ($this->file_handler !== null) {
+                // need to write log
+                fwrite($this->file_handler, stripslashes(json_encode($result)) . "\n");      
+            }
+            return $result; 
         }
         return true;
     }
@@ -801,7 +826,7 @@ class BatchConsumer extends AbstractConsumer {
             $ret = $this->_do_request(array(
                 "data_list" => $this->_encode_msg_list($this->_buffers),
                 "gzip" => 1
-            ));
+            ),$this->_buffers);
         }
         if ($ret) {
             $this->_buffers = array();
@@ -815,7 +840,7 @@ class BatchConsumer extends AbstractConsumer {
      * @param array $data
      * @return bool 请求是否成功
      */
-    protected function _do_request($data) {
+    protected function _do_request($data,$origin_data) {
         $params = array();
         foreach ($data as $key => $value) {
             $params[] = $key . '=' . urlencode($value);
@@ -840,6 +865,20 @@ class BatchConsumer extends AbstractConsumer {
 
         $ret = curl_exec($ch);
 
+        // judge back detail response
+        if($this->_response_info){
+            $result = array(
+                "ret_content" => $ret,
+                "ret_origin_data" => $origin_data,
+                "ret_code" => curl_getinfo($ch, CURLINFO_HTTP_CODE),
+            );
+            if ($this->file_handler !== null) {
+                // need to write log
+                fwrite($this->file_handler, stripslashes(json_encode($result)) . "\n");
+            }
+            curl_close($ch);
+            return $result;
+        }
         if (false === $ret) {
             curl_close($ch);
             return false;
@@ -870,6 +909,10 @@ class BatchConsumer extends AbstractConsumer {
     }
 
     public function close() {
-        return $this->flush();
+        $closeResult = $this->flush();
+        if ($this->file_handler !== null) {
+            fclose($this->file_handler);
+        }
+        return $closeResult;
     }
 }
