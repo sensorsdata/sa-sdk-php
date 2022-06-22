@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '1.10.9');
+define('SENSORS_ANALYTICS_SDK_VERSION', '2.0.0');
 
 class SensorsAnalyticsException extends \Exception {
 }
@@ -71,18 +71,27 @@ class SensorsAnalytics {
     }
 
     private function _assert_key_with_regex($key) {
-        $name_pattern = "/^((?!^distinct_id$|^original_id$|^time$|^properties$|^id$|^first_id$|^second_id$|^users$|^events$|^event$|^user_id$|^date$|^datetime$)[a-zA-Z_$][a-zA-Z\\d_$]{0,99})$/i";
+        $name_pattern = "/^((?!^distinct_id$|^original_id$|^time$|^properties$|^id$|^first_id$|^second_id$|^users$|^events$|^event$|^user_id$|^date$|^datetime$|^user_group|^user_tag)[a-zA-Z_$][a-zA-Z\\d_$]{0,99})$/i";
         if (!preg_match($name_pattern, $key)) {
             throw new SensorsAnalyticsIllegalDataException("key must be a valid variable key. [key='${key}']");
         }
     }
 
-    private function _assert_key($key) {
-        if (strlen($key) == 0) {
-            throw new SensorsAnalyticsIllegalDataException("key must not be empty");
+
+    private function _assert_key($type, $key) {
+        if ($key == null || strlen($key) == 0) {
+            throw new SensorsAnalyticsIllegalDataException(sprintf("the %s key is empty or null.", $type));
         }
-        if (strlen($key) > 255) {
-            throw new SensorsAnalyticsIllegalDataException("the max length of key is 255");
+        $this->_assert_key_with_regex($key);
+    }
+
+
+    private function _assert_value($type, $value){
+       if ($value == null || strlen($value) == 0){
+           throw new SensorsAnalyticsIllegalDataException(sprintf("the %s value is empty or null.",$type));
+       }
+        if (strlen($value) > 255) {
+            throw new SensorsAnalyticsIllegalDataException(sprintf("the %s value %s is too long, max length is 255.", $type, $value));
         }
     }
 
@@ -131,6 +140,18 @@ class SensorsAnalytics {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     *  检验 id 集合
+     * @param array $identities
+     * @throws SensorsAnalyticsIllegalDataException
+     */
+    private function _assert_identities($type, $identities){
+        foreach ($identities as $key => $value){
+            $this->_assert_key($type, $key);
+            $this->_assert_value($type, $value);
         }
     }
 
@@ -191,7 +212,48 @@ class SensorsAnalytics {
         } else {
             throw new SensorsAnalyticsIllegalDataException("property must be an array.");
         }
+
+        // 检查 identities
+
+        if (isset($data['identities'])) {
+            if (is_array($data['identities'])) {
+                $this->_assert_identities($data['type'], $data['identities']);
+            } else {
+                throw new SensorsAnalyticsIllegalDataException("identities must be an array.");
+            }
+        }
+
+
+
         return $data;
+    }
+
+    /**
+     * @param string $distinct_id
+     * @param array $id_map
+     * @return array
+     * @throws SensorsAnalyticsIllegalDataException
+     */
+    public  function check_identities_and_generate_distinct_id($distinct_id, $id_map){
+      $tmpId = null;
+      foreach ($id_map as $key => $value){
+          $this->_assert_key("track", $key);
+          $this->_assert_value("track", $value);
+          if ($tmpId == null && $distinct_id == null){
+              $tmpId = strlen(sprintf("%s+%s", $key, $value)) > 255 ? null : sprintf("%s+%s", $key, $value) ;
+          }
+      }
+      if ($distinct_id == null ){
+          if (isset($id_map['$identity_login_id'])){
+              $re_distinct_id =  $id_map['$identity_login_id'];
+          }else{
+              $re_distinct_id = $tmpId == null ? reset($id_map) : $tmpId ;
+          }
+      }else{
+          $this->_assert_value('distinct_id', $distinct_id);
+          $re_distinct_id = $distinct_id;
+      }
+      return array('distinct_id' => $re_distinct_id) ;
     }
 
     /**
@@ -472,7 +534,7 @@ class SensorsAnalytics {
 
     public function _track_item($action_type, $item_type, $item_id, $properties = array()) {
         $this->_assert_key_with_regex($item_type);
-        $this->_assert_key($item_id);
+        $this->_assert_key("Item Type", $item_id);
         $this->_assert_properties($properties);
 
         $event_project = null;
@@ -504,6 +566,163 @@ class SensorsAnalytics {
         }
 
         return $this->_consumer->send($this->_json_dumps($data));
+    }
+
+
+    /**
+     * @throws SensorsAnalyticsIllegalDataException
+     */
+    public function bind(){
+        try {
+            $identities = func_get_args();
+            $identity_map = array() ;
+            foreach ( $identities as $key => $identity) {
+                if (!is_null($identity)){
+                    $identity_map = array_merge($identity_map , $identity -> get_identity_map());
+                }
+            }
+            $identity_map = array_filter($identity_map, function($v, $k) {
+                if (is_numeric($k) && is_null($v) ){
+                    return false;
+                }
+                return true;
+            }, ARRAY_FILTER_USE_BOTH);
+            if ( count($identity_map) < 2) {
+                throw new SensorsAnalyticsIllegalDataException("the identities is invalid，you should have at least two identities.");
+            }
+            $this->_idm_track_event('track_id_bind', '$BindID', new SensorsAnalyticsIdentity($identity_map));
+        } catch (Exception $e){
+            echo '<br>'.$e.'<br>';
+        }
+    }
+
+    /**
+     * @param SensorsAnalyticsIdentity $identity
+     * @return void
+     */
+    public function unbind($identity){
+        try {
+            $this->_idm_track_event('track_id_unbind', '$UnbindID', $identity);
+        } catch (Exception $e){
+            echo '<br>'.$e.'<br>';
+        }
+    }
+
+    /**
+     * @param SensorsAnalyticsIdentity $identity
+     * @param string $event_name 事件
+     * @param array $properties
+     * @return void
+     */
+    public function track_by_id($identity, $event_name, $properties = array()){
+        try {
+            if ($identity == null ){
+                throw  new SensorsAnalyticsIllegalDataException('the identity is invalid');
+            }
+            if ($event_name == null || !is_string($event_name) ){
+                throw  new SensorsAnalyticsIllegalDataException('the event_name is invalid');
+            }
+            if ($properties) {
+                $all_properties = array_merge($this->_super_properties, $properties);
+            } else {
+                $all_properties = array_merge($this->_super_properties, array());
+            }
+            $this->_idm_track_event('track', $event_name, $identity, $all_properties);
+        } catch (Exception $e){
+            echo '<br>'.$e.'<br>';
+        }
+    }
+
+    /**
+     * 直接设置一个用户的 Profile，如果已存在则覆盖。
+     *
+     * @param SensorsAnalyticsIdentity $identity 用户标识 ID
+     * @param array $profiles 用户属性
+     * @return bool
+     */
+    public function profile_set_by_id($identity, $profiles = array()) {
+        try {
+            return $this -> _idm_track_event('profile_set', null, $identity, $profiles);
+        } catch (Exception $e){
+            echo '<br>'.$e.'<br>';
+        }
+    }
+
+    /**
+     * 直接设置一个用户的 Profile，如果某个 Profile 已存在则不设置。
+     * @param SensorsAnalyticsIdentity $identity 用户标识 ID
+     * @param array $profiles 用户属性
+     * @return bool
+     */
+    public function profile_set_once_by_id($identity, $profiles = array()) {
+        try {
+            return $this -> _idm_track_event('profile_set_once', null, $identity, $profiles);
+        } catch (Exception $e){
+            echo '<br>'.$e.'<br>';
+        }
+    }
+
+    /**
+     * 增减/减少一个用户的某一个或者多个数值类型的 Profile。
+     * @param SensorsAnalyticsIdentity $identity 用户标识 ID
+     * @param array $profiles 用户属性
+     * @return bool
+     */
+    public function profile_increment_by_id($identity , $profiles = array()) {
+        try {
+            return $this -> _idm_track_event('profile_increment', null, $identity, $profiles);
+        } catch (Exception $e){
+            echo '<br>'.$e.'<br>';
+        }
+    }
+
+    /**
+     * 追加一个用户的某一个或者多个集合类型的 Profile。
+     * @param SensorsAnalyticsIdentity $identity 用户标识 ID
+     * @param array $profiles 用户属性
+     * @return bool
+     */
+    public function profile_append_by_id($identity , $profiles = array()) {
+        try {
+            return $this -> _idm_track_event('profile_append', null, $identity, $profiles);
+        } catch (Exception $e){
+            echo '<br>'.$e.'<br>';
+        }
+    }
+
+    /**
+     * 删除一个用户的一个或者多个 Profile。
+     * @param SensorsAnalyticsIdentity $identity 用户标识 ID
+     * @param array $profile_keys 用户属性
+     * @return bool
+     */
+    public function profile_unset_by_id($identity , $profile_keys = array()) {
+        try {
+            if ($profile_keys != null && array_key_exists(0, $profile_keys)) {
+                $new_profile_keys = array();
+                foreach ($profile_keys as $key) {
+                    $new_profile_keys[$key] = true;
+                }
+                $profile_keys = $new_profile_keys;
+            }
+            return $this -> _idm_track_event('profile_unset', null, $identity, $profile_keys);
+        } catch (Exception $e){
+            echo '<br>'.$e.'<br>';
+        }
+    }
+
+    /**
+     * 删除整个用户的信息。
+     *
+     * @param SensorsAnalyticsIdentity $identity 用户标识 ID
+     * @return bool
+     */
+    public function profile_delete_by_id($identity) {
+        try {
+            return $this -> _idm_track_event('profile_delete', null, $identity, array());
+        } catch (Exception $e){
+            echo '<br>'.$e.'<br>';
+        }
     }
 
     /**
@@ -548,10 +767,11 @@ class SensorsAnalytics {
      * @param bool $is_login_id
      * @param string $original_id
      * @param array $properties
+     * @param array $identities
      * @return bool
      * @internal param array $profiles
      */
-    public function _track_event($update_type, $event_name, $distinct_id, $is_login_id, $original_id, $properties) {
+    public function _track_event($update_type, $event_name, $distinct_id, $is_login_id, $original_id, $properties, $identities = array()) {
         $event_time = $this->_extract_user_time($properties);
 
         if ($is_login_id) {
@@ -570,18 +790,58 @@ class SensorsAnalytics {
             $data['project'] = $this->_project_name;
         }
 
-        if (strcmp($update_type, "track") == 0) {
+        if (strcmp($update_type, "track") == 0 or strcmp($update_type, "track_id_bind") == 0
+           or strcmp($update_type, "track_id_unbind") == 0) {
             $data['event'] = $event_name;
         } else if (strcmp($update_type, "track_signup") == 0) {
             $data['event'] = $event_name;
             $data['original_id'] = $original_id;
         }
 
+        if (count($identities) > 0){
+            $data['identities'] = $identities ;
+        }
+
         $data = $this->_normalize_data($data);
         return $this->_consumer->send($this->_json_dumps($data));
     }
 
+    /**
+     * @param string $update_type
+     * @param string $event_name
+     * @param SensorsAnalyticsIdentity $identity
+     * @param array $property_map
+     * @return bool
+     * @throws SensorsAnalyticsIllegalDataException
+     */
+    private function _idm_track_event($update_type, $event_name, $identity, $property_map = array()){
+        if (is_null($identity)){
+            throw new SensorsAnalyticsIllegalDataException("the identity is invalid.");
+        }else if (count($identity -> get_identity_map()) < 1){
+            throw new SensorsAnalyticsIllegalDataException("the identity is empty.");
+        }
+       $pair =  $this->check_identities_and_generate_distinct_id(null, $identity -> get_identity_map());
+       return $this->_track_event($update_type, $event_name, $pair['distinct_id'], false, null, $property_map, $identity -> get_identity_map()) ;
+    }
+
 }
+
+class SensorsAnalyticsIdentity{
+    protected  $identity_map ;
+    public function __construct($identity_map = array())
+    {
+        $this -> identity_map = $identity_map ;
+    }
+    public function get_identity_map(){
+        return $this->identity_map;
+    }
+    public function add_identity($key,$value){
+        $this->identity_map[$key] = $value;
+    }
+
+
+}
+
 
 
 abstract class AbstractConsumer {
