@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '2.0.0');
+define('SENSORS_ANALYTICS_SDK_VERSION', '2.0.1');
 
 class SensorsAnalyticsException extends \Exception {
 }
@@ -517,7 +517,7 @@ class SensorsAnalytics {
      * @return bool
      */
     public function item_set($item_type, $item_id, $properties = array()) {
-        return $this->_track_item('item_set', $item_type, $item_id, $properties);
+	return $this->_track_item('item_set', $item_type, $item_id, $properties);
     }
 
     /**
@@ -533,8 +533,11 @@ class SensorsAnalytics {
     }
 
     public function _track_item($action_type, $item_type, $item_id, $properties = array()) {
-        $this->_assert_key_with_regex($item_type);
-        $this->_assert_key("Item Type", $item_id);
+        if ($item_id == null || !is_string($item_id) ){
+            throw new SensorsAnalyticsIllegalDataException('the item_id is invalid,the type must be string');
+        }
+	$this->_assert_key_with_regex($item_type);
+        $this->_assert_value("Item Type", $item_id);
         $this->_assert_properties($properties);
 
         $event_project = null;
