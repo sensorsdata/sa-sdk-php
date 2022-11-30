@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '2.0.1');
+define('SENSORS_ANALYTICS_SDK_VERSION', '2.0.2');
 
 class SensorsAnalyticsException extends \Exception {
 }
@@ -331,6 +331,32 @@ class SensorsAnalytics {
     }
 
     /**
+     * 设置 _track_id 的值，如 properties 包含 $track_id 且符合格式，则使用传入的值。
+     *
+     * @param array $data 事件的日志。
+     * @return int
+     */
+    private function _set_track_id($data){
+        $properties = $data['properties'];
+        $track_id = mt_rand(PHP_INT_MIN,PHP_INT_MAX);
+        try{
+            if ($properties && isset($properties['$track_id'])) {
+               if(is_numeric($properties['$track_id'])){
+                settype($properties['$track_id'],'integer');
+                $track_id = $properties['$track_id'];
+               }
+                unset($properties['$track_id']);
+                $data['properties'] = $properties;
+            }
+
+        }catch(Exception $e){
+            unset($properties['$track_id']);
+            echo '<br>'.$e.'<br>';            
+        }
+        $data['_track_id'] = $track_id;
+        return $data;
+    }
+    /**
      * 跟踪一个用户的行为。
      *
      * @param string $distinct_id 用户的唯一标识。
@@ -567,6 +593,8 @@ class SensorsAnalytics {
         if (count($data['properties']) == 0) {
             $data['properties'] = new \ArrayObject();
         }
+
+        $data = $this->_set_track_id($data);
 
         return $this->_consumer->send($this->_json_dumps($data));
     }
@@ -805,6 +833,7 @@ class SensorsAnalytics {
             $data['identities'] = $identities ;
         }
 
+        $data = $this->_set_track_id($data);
         $data = $this->_normalize_data($data);
         return $this->_consumer->send($this->_json_dumps($data));
     }
