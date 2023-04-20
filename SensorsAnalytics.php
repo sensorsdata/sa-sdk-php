@@ -1,6 +1,6 @@
 <?php
 
-define('SENSORS_ANALYTICS_SDK_VERSION', '2.0.2');
+define('SENSORS_ANALYTICS_SDK_VERSION', '2.0.3');
 
 class SensorsAnalyticsException extends \Exception {
 }
@@ -73,7 +73,7 @@ class SensorsAnalytics {
     private function _assert_key_with_regex($key) {
         $name_pattern = "/^((?!^distinct_id$|^original_id$|^time$|^properties$|^id$|^first_id$|^second_id$|^users$|^events$|^event$|^user_id$|^date$|^datetime$|^user_group|^user_tag)[a-zA-Z_$][a-zA-Z\\d_$]{0,99})$/i";
         if (!preg_match($name_pattern, $key)) {
-            throw new SensorsAnalyticsIllegalDataException("key must be a valid variable key. [key='${key}']");
+            throw new SensorsAnalyticsIllegalDataException("key must be a valid variable key. [key='{$key}']");
         }
     }
 
@@ -338,7 +338,7 @@ class SensorsAnalytics {
      */
     private function _set_track_id($data){
         $properties = $data['properties'];
-        $track_id = mt_rand(PHP_INT_MIN,PHP_INT_MAX);
+        $track_id = mt_rand();
         try{
             if ($properties && isset($properties['$track_id'])) {
                if(is_numeric($properties['$track_id'])){
