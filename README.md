@@ -20,16 +20,6 @@ PHP SDK 是一款用于 PHP 神策数据埋点的 SDK。
 请参考神策官网 [PHP SDK 集成文档](https://manual.sensorsdata.cn/sa/latest/php-sdk-1573935.html)
 
 
-## 贡献
-
-* 1.  在您的 GitHub 账户下 fork sa-sdk-php 开源项目；
-* 2.  根据您的需求在本地 clone 一份 sa-sdk-php 源码；
-* 3.  您修改或者新增功能后，push 到您 fork 的远程分支；
-* 4.  创建 pull request，向 sa-sdk-php 官方开发分支提交合入请求；
-* 5.  神策 SDK 研发团队会及时 review 代码，测试通过后合入。
-
-
-
 ## 新书推荐
 
 | [《数据驱动：从方法到实践》](https://item.jd.com/12322322.html) | [《Android 全埋点解决方案》](https://item.jd.com/12574672.html) | [《iOS 全埋点解决方案》](https://item.jd.com/12867068.html)
@@ -37,17 +27,4 @@ PHP SDK 是一款用于 PHP 神策数据埋点的 SDK。
 
 
 ## License
-
-Copyright 2015－2024 Sensors Data Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+[License 协议](https://github.com/sensorsdata/sa-sdk-php/blob/master/LICENSE)
