@@ -1065,6 +1065,7 @@ class BatchConsumer extends AbstractConsumer {
     private $_max_size;
     private $_url_prefix;
     private $_request_timeout;
+    private $_response_info;
     private $file_handler;
 
     /**
