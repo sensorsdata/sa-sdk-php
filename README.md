@@ -27,4 +27,4 @@ PHP SDK 是一款用于 PHP 神策数据埋点的 SDK。
 
 
 ## License
-[License 协议](https://github.com/sensorsdata/sa-sdk-php/blob/master/LICENSE)
+参照 [License 协议](https://github.com/sensorsdata/sa-sdk-php/blob/master/LICENSE)
